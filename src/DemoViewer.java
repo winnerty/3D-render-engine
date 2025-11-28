@@ -1,8 +1,8 @@
 import javax.swing.*;
 import java.awt.*;
-import java.awt.geom.Path2D;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.zip.Inflater;
 
 public class DemoViewer {
 
@@ -17,31 +17,33 @@ public class DemoViewer {
         JSlider pitchSlider = new JSlider(SwingConstants.VERTICAL, -90, 90, 0);
         pane.add(pitchSlider, BorderLayout.EAST);
 
-        ArrayList<Triangle> tris = new ArrayList<Triangle>();
-        tris.add(new Triangle(new Vertex(100, 100, 100),
-                new Vertex(-100, -100, 100),
-                new Vertex(-100, 100, -100),
-                Color.WHITE));
-        tris.add(new Triangle(new Vertex(100, 100, 100),
-                new Vertex(-100, -100, 100),
-                new Vertex(100, -100, -100),
-                Color.RED));
-        tris.add(new Triangle(new Vertex(-100, 100, -100),
-                new Vertex(100, -100, -100),
-                new Vertex(100, 100, 100),
-                Color.GREEN));
-        tris.add(new Triangle(new Vertex(-100, 100, -100),
-                new Vertex(100, -100, -100),
-                new Vertex(-100, -100, 100),
-                Color.BLUE));
-
         JPanel renderPanel = new JPanel() {
-
             public void paintComponent(Graphics g) {
-
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setColor(Color.BLACK);
                 g2.fillRect(0, 0, getWidth(), getHeight());
+
+                ArrayList<Triangle> tris = new ArrayList<>();
+                tris.add(new Triangle(new Vertex(100, 100, 100),
+                        new Vertex(-100, -100, 100),
+                        new Vertex(-100, 100, -100),
+                        Color.WHITE));
+                tris.add(new Triangle(new Vertex(100, 100, 100),
+                        new Vertex(-100, -100, 100),
+                        new Vertex(100, -100, -100),
+                        Color.RED));
+                tris.add(new Triangle(new Vertex(-100, 100, -100),
+                        new Vertex(100, -100, -100),
+                        new Vertex(100, 100, 100),
+                        Color.GREEN));
+                tris.add(new Triangle(new Vertex(-100, 100, -100),
+                        new Vertex(100, -100, -100),
+                        new Vertex(-100, -100, 100),
+                        Color.BLUE));
+
+                for (int i = 0; i < 4; i++) {
+                    tris = inflate(tris);
+                }
 
                 double heading = Math.toRadians(headingSlider.getValue());
                 Matrix3 headingTransform = new Matrix3(new double[] {
@@ -59,9 +61,6 @@ public class DemoViewer {
 
                 Matrix3 transform = headingTransform.multiply(pitchTransformation);
 
-                //g2.translate(getWidth() / 2, getHeight() / 2);
-                //g2.setColor(Color.WHITE);
-
                 BufferedImage img = new BufferedImage(getWidth(), getHeight(), BufferedImage.TYPE_INT_ARGB);
 
                 double[] zBuffer = new double[img.getWidth() * img.getHeight()];
@@ -75,12 +74,12 @@ public class DemoViewer {
                     Vertex v2 = transform.transform(t.v2);
                     Vertex v3 = transform.transform(t.v3);
 
-                    v1.x += getWidth() / 2;
-                    v1.y += getHeight() / 2;
-                    v2.x += getWidth() / 2;
-                    v2.y += getHeight() / 2;
-                    v3.x += getWidth() / 2;
-                    v3.y += getHeight() / 2;
+                    v1.x += getWidth() / 2.0;
+                    v1.y += getHeight() / 2.0;
+                    v2.x += getWidth() / 2.0;
+                    v2.y += getHeight() / 2.0;
+                    v3.x += getWidth() / 2.0;
+                    v3.y += getHeight() / 2.0;
 
                     Vertex ab = new Vertex(v2.x - v1.x, v2.y - v1.y, v2.z - v1.z);
                     Vertex ac = new Vertex(v3.x - v1.x, v3.y - v1.y, v3.z - v1.z);
@@ -98,11 +97,8 @@ public class DemoViewer {
 
                     double angleCos = Math.abs(norm.z);
 
-                    //getColor();
-
                     int minX = (int) Math.max(0, Math.ceil(Math.min(v1.x, Math.min(v2.x, v3.x))));
                     int maxX = (int) Math.min(img.getWidth() - 1, Math.floor(Math.max(v1.x, Math.max(v2.x, v3.x))));
-
                     int minY = (int) Math.max(0, Math.ceil(Math.min(v1.y, Math.min(v2.y, v3.y))));
                     int maxY = (int) Math.min(img.getHeight() - 1, Math.floor(Math.max(v1.y, Math.max(v2.y, v3.y))));
 
@@ -127,9 +123,7 @@ public class DemoViewer {
                 }
 
                 g2.drawImage(img, 0, 0, null);
-
             }
-
         };
 
         pane.add(renderPanel, BorderLayout.CENTER);
@@ -139,11 +133,9 @@ public class DemoViewer {
 
         frame.setSize(400, 400);
         frame.setVisible(true);
-
     }
 
     public static Color getShade(Color color, double shade) {
-
         double redLinear = Math.pow(color.getRed(), 2.4) * shade;
         double greenLinear = Math.pow(color.getGreen(), 2.4) * shade;
         double blueLinear = Math.pow(color.getBlue(), 2.4) * shade;
@@ -153,7 +145,31 @@ public class DemoViewer {
         int blue = (int) Math.pow(blueLinear, 1/2.4);
 
         return new Color(red, green, blue);
+    }
 
+    public static ArrayList<Triangle> inflate(ArrayList<Triangle> tris) {
+        ArrayList<Triangle> result = new ArrayList<>();
+
+        for (Triangle t : tris) {
+            Vertex m1 = new Vertex((t.v1.x + t.v2.x) / 2, (t.v1.y + t.v2.y) / 2, (t.v1.z + t.v2.z) / 2);
+            Vertex m2 = new Vertex((t.v2.x + t.v3.x) / 2, (t.v2.y + t.v3.y) / 2, (t.v2.z + t.v3.z) / 2);
+            Vertex m3 = new Vertex((t.v1.x + t.v3.x) / 2, (t.v1.y + t.v3.y) / 2, (t.v1.z + t.v3.z) / 2);
+            result.add(new Triangle(t.v1, m1, m3, t.color));
+            result.add(new Triangle(t.v2, m1, m2, t.color));
+            result.add(new Triangle(t.v3, m2, m3, t.color));
+            result.add(new Triangle(m1, m2, m3, t.color));
+        }
+
+        for (Triangle t : result) {
+            for (Vertex v : new Vertex[] { t.v1, t.v2, t.v3 }) {
+                double l = Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z) / Math.sqrt(30000);
+                v.x /= l;
+                v.y /= l;
+                v.z /= l;
+            }
+        }
+
+        return result;
     }
 
 }
