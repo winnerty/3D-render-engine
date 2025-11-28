@@ -35,18 +35,32 @@ public class DemoViewer {
                 Color.BLUE));
 
         JPanel renderPanel = new JPanel() {
+
             public void paintComponent(Graphics g) {
+
                 Graphics2D g2 = (Graphics2D) g;
                 g2.setColor(Color.BLACK);
                 g2.fillRect(0, 0, getWidth(), getHeight());
+
                 double heading = Math.toRadians(headingSlider.getValue());
-                Matrix3 transform = new Matrix3(new double[] {
-                    Math.cos(heading), 0, -Math.sin(heading),
-                    0, 1, 0,
-                    Math.sin(heading), 0, Math.cos(heading)
+                Matrix3 headingTransform = new Matrix3(new double[] {
+                        Math.cos(heading), 0, Math.sin(heading),
+                        0, 1, 0,
+                        -Math.sin(heading), 0, Math.cos(heading)
                 });
+
+                double pitch = Math.toRadians(pitchSlider.getValue());
+                Matrix3 pitchTransformation = new Matrix3(new double[] {
+                        1, 0, 0,
+                        0, Math.cos(pitch), Math.sin(pitch),
+                        0, -Math.sin(pitch), Math.cos(pitch)
+                });
+
+                Matrix3 transform = headingTransform.multiply(pitchTransformation);
+
                 g2.translate(getWidth() / 2, getHeight() / 2);
                 g2.setColor(Color.WHITE);
+
                 for (Triangle t : tris) {
                     Vertex v1 = transform.transform(t.v1);
                     Vertex v2 = transform.transform(t.v2);
@@ -58,8 +72,11 @@ public class DemoViewer {
                     path.closePath();
                     g2.draw(path);
                 }
+
             }
+
         };
+
         pane.add(renderPanel, BorderLayout.CENTER);
 
         headingSlider.addChangeListener(e -> renderPanel.repaint());
